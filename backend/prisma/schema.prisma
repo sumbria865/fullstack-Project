@@ -1,0 +1,86 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TicketPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TicketStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+
+
+model User {
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  name     String?
+  email    String   @unique
+  password String
+  role     UserRole @default(USER)
+
+  ownedProjects   Project[] @relation("OwnerProjects")
+  assignedTickets Ticket[]  @relation("AssignedTickets")
+  comments        Comment[]
+
+  createdAt DateTime @default(now())
+}
+
+model Project {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+
+  ownerId String @db.ObjectId
+  owner   User   @relation("OwnerProjects", fields: [ownerId], references: [id])
+
+  memberIds String[] @db.ObjectId
+  tickets   Ticket[]
+
+  createdAt DateTime @default(now())
+}
+
+model Ticket {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(TODO)
+
+  assigneeId String? @db.ObjectId
+  assignee   User?   @relation("AssignedTickets", fields: [assigneeId], references: [id])
+
+  projectId String  @db.ObjectId
+  project   Project @relation(fields: [projectId], references: [id])
+
+  comments  Comment[]
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  text String
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  ticketId String @db.ObjectId
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  createdAt DateTime @default(now())
+}
