@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageWrapper from "../components/layout/PageWrapper";
-import { getProjects } from "../services/project.service";
-import { getTickets } from "../services/ticket.service";
+import Button from "../components/ui/Button";
+import { getProjects, createProject, deleteProject } from "../services/project.service";
+
+import { getTickets } from '../services/ticket.service';
+
 
 /* ---------- Types ---------- */
-
 type Project = {
   id: string;
   name: string;
@@ -17,14 +19,10 @@ type Ticket = {
   title: string;
   priority: "HIGH" | "MEDIUM" | "LOW";
   status: "TODO" | "IN_PROGRESS" | "DONE";
-  assignee?: {
-    id: string;
-    name: string;
-  };
+  assignee?: { name: string };
 };
 
 /* ---------- Component ---------- */
-
 const Dashboard = () => {
   const navigate = useNavigate();
 
@@ -32,22 +30,24 @@ const Dashboard = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const currentUser = { name: "Prinka", role: "ADMIN" };
+  // ✅ Logged-in user with role
+  const currentUser = JSON.parse(
+    localStorage.getItem("user") || '{"name":"User","role":"USER"}'
+  );
+  const userRole = currentUser.role;
 
+  /* ---------- Fetch Data ---------- */
   useEffect(() => {
     const fetchData = async () => {
       try {
         const projectsData = await getProjects();
         setProjects(projectsData);
 
-        const ticketPromises = projectsData.map((p) =>
-          getTickets(p.id)
-        );
-
+        const ticketPromises = projectsData.map((p) => getTickets(p.id));
         const ticketsByProject = await Promise.all(ticketPromises);
         setTickets(ticketsByProject.flat());
-      } catch (error) {
-        console.error("Dashboard load failed", error);
+      } catch (err) {
+        console.error("Dashboard load failed:", err);
       } finally {
         setLoading(false);
       }
@@ -56,36 +56,89 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
+  /* ---------- Reports Helpers ---------- */
+  const countByStatus = (status: string) =>
+    tickets.filter((t) => t.status === status).length;
+
+  const countByPriority = (priority: string) =>
+    tickets.filter((t) => t.priority === priority).length;
+
+  /* ---------- Delete Project (ADMIN only) ---------- */
+  const handleDeleteProject = async (projectId: string) => {
+    if (!window.confirm("Are you sure you want to delete this project?")) return;
+    try {
+      await deleteProject(projectId);
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      alert("Delete failed. Check console.");
+    }
+  };
+
   if (loading) {
     return (
       <PageWrapper>
-        <div className="p-8 text-center text-gray-600">
-          Loading dashboard...
-        </div>
+        <div className="p-8 text-center text-gray-600">Loading dashboard...</div>
       </PageWrapper>
     );
   }
 
   return (
     <PageWrapper>
-      <div className="space-y-6 p-4 sm:p-6 md:p-8">
-
+      <div className="space-y-8 p-4 sm:p-6 md:p-8">
         {/* ---------- Header ---------- */}
-        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl p-6 shadow-lg">
-          <h1 className="text-3xl sm:text-4xl font-bold">
-            Welcome back, {currentUser.name} 👋
-          </h1>
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl p-6 shadow-lg flex flex-col sm:flex-row justify-between items-center">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-bold">
+              Welcome back, {currentUser.name} 👋
+            </h1>
+            <p className="text-sm text-indigo-100 mt-1">
+              Your role: <span className="font-semibold">{userRole}</span>
+            </p>
+          </div>
+
+          {/* Create Project button (MANAGER & ADMIN only) */}
+          {["ADMIN", "MANAGER"].includes(userRole) && (
+            <Button
+              className="mt-4 sm:mt-0 bg-indigo-600 text-white"
+              onClick={() => navigate("/projects/create")}
+            >
+              Create New Project
+            </Button>
+          )}
         </div>
 
-        {/* ---------- Projects ---------- */}
-        <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">
-            Projects ({projects.length})
-          </h2>
+        {/* ---------- REPORTS ---------- */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl shadow p-5 text-center">
+            <p className="text-sm text-gray-500">TODO</p>
+            <p className="text-3xl font-bold text-indigo-600">{countByStatus("TODO")}</p>
+          </div>
+          <div className="bg-white rounded-xl shadow p-5 text-center">
+            <p className="text-sm text-gray-500">IN PROGRESS</p>
+            <p className="text-3xl font-bold text-yellow-500">{countByStatus("IN_PROGRESS")}</p>
+          </div>
+          <div className="bg-white rounded-xl shadow p-5 text-center">
+            <p className="text-sm text-gray-500">DONE</p>
+            <p className="text-3xl font-bold text-green-600">{countByStatus("DONE")}</p>
+          </div>
+        </div>
 
-          {projects.length === 0 && (
-            <p className="text-gray-500">No projects found.</p>
-          )}
+        {/* ---------- PRIORITY REPORT ---------- */}
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Ticket Priority Report</h2>
+          <div className="flex flex-wrap gap-6 text-sm">
+            <span className="text-red-600 font-medium">HIGH: {countByPriority("HIGH")}</span>
+            <span className="text-yellow-600 font-medium">MEDIUM: {countByPriority("MEDIUM")}</span>
+            <span className="text-green-600 font-medium">LOW: {countByPriority("LOW")}</span>
+          </div>
+        </div>
+
+        {/* ---------- PROJECTS ---------- */}
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Projects ({projects.length})</h2>
+
+          {projects.length === 0 && <p className="text-gray-500">No projects found.</p>}
 
           <div className="space-y-3">
             {projects.map((project) => (
@@ -104,42 +157,44 @@ const Dashboard = () => {
                   </button>
 
                   <button
-                    onClick={() =>
-                      navigate(`/projects/${project.id}/tickets`)
-                    }
+                    onClick={() => navigate(`/projects/${project.id}/tickets`)}
                     className="text-blue-600 hover:underline"
                   >
                     Tickets
                   </button>
 
                   <button
-                    onClick={() =>
-                      navigate(`/projects/${project.id}/kanban`)
-                    }
+                    onClick={() => navigate(`/projects/${project.id}/kanban`)}
                     className="text-green-600 hover:underline"
                   >
                     Kanban
                   </button>
+
+                  {/* Delete button only for ADMIN */}
+                  {userRole === "ADMIN" && (
+                    <button
+                      onClick={() => handleDeleteProject(project.id)}
+                      className="text-red-600 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ---------- Tickets ---------- */}
+        {/* ---------- RECENT TICKETS ---------- */}
         <div className="bg-white rounded-xl shadow p-6 overflow-x-auto">
-          <h2 className="text-lg font-semibold mb-4">
-            Recent Tickets ({tickets.length})
-          </h2>
+          <h2 className="text-lg font-semibold mb-4">Recent Tickets ({tickets.length})</h2>
 
           {tickets.length === 0 ? (
-            <p className="text-gray-500">
-              No tickets found. Create one to get started.
-            </p>
+            <p className="text-gray-500">No tickets found. Create one to get started.</p>
           ) : (
-            <table className="w-full table-auto">
+            <table className="w-full table-auto text-sm">
               <thead>
-                <tr className="border-b text-left">
+                <tr className="border-b text-left text-gray-600">
                   <th className="py-2 px-3">Title</th>
                   <th className="py-2 px-3">Priority</th>
                   <th className="py-2 px-3">Assignee</th>
@@ -151,9 +206,7 @@ const Dashboard = () => {
                   <tr key={ticket._id} className="border-b">
                     <td className="py-2 px-3">{ticket.title}</td>
                     <td className="py-2 px-3">{ticket.priority}</td>
-                    <td className="py-2 px-3">
-                      {ticket.assignee?.name || "Unassigned"}
-                    </td>
+                    <td className="py-2 px-3">{ticket.assignee?.name || "Unassigned"}</td>
                     <td className="py-2 px-3">{ticket.status}</td>
                   </tr>
                 ))}
@@ -161,7 +214,6 @@ const Dashboard = () => {
             </table>
           )}
         </div>
-
       </div>
     </PageWrapper>
   );

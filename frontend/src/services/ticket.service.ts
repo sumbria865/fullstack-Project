@@ -1,36 +1,39 @@
 import api from "./api";
 
-/* ======================================================
-   FETCH TICKETS (ALL OR BY PROJECT)
-   GET /api/tickets
-   GET /api/tickets?projectId=xxxx
-   ====================================================== */
+export interface Ticket {
+  id: string;
+  title: string;
+  description?: string;
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  status: "TODO" | "IN_PROGRESS" | "DONE";
+  projectId: string;
+  createdAt: string;
+}
+
+/* ===============================
+   FETCH TICKETS
+================================ */
 export const getTickets = async (projectId?: string) => {
-  const res = await api.get(
-    projectId ? `/tickets?projectId=${projectId}` : "/tickets"
-  );
-
-  // ✅ ALWAYS return array (safe handling)
-  if (Array.isArray(res.data)) return res.data;
-  if (Array.isArray(res.data?.data)) return res.data.data;
-
-  return [];
+  const url = projectId ? `/tickets?projectId=${projectId}` : "/tickets";
+  const res = await api.get(url);
+  return res.data as Ticket[];
 };
 
-/* ======================================================
-   CREATE TICKET
-   POST /api/tickets
-   ====================================================== */
+/* ===============================
+   CREATE TICKET  ✅ FIXED
+================================ */
 export const createTicket = async (data: {
   title: string;
   description?: string;
-  priority: "LOW" | "MEDIUM" | "HIGH"; // ✅ FIXED (Prisma enum)
+  priority: "HIGH" | "MEDIUM" | "LOW";
   projectId: string;
 }) => {
   const res = await api.post("/tickets", {
-    ...data,
-    status: "TODO", // ✅ REQUIRED by Prisma
+    title: data.title,
+    description: data.description,
+    priority: data.priority,
+    projectId: data.projectId,
   });
 
-  return res.data;
+  return res.data as Ticket;
 };

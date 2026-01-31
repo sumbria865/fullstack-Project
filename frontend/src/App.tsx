@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { AppProvider } from "./context/AppContext";
 import React from "react";
 
 /* ---------- Pages ---------- */
@@ -17,51 +16,151 @@ import CreateProjectPage from "./pages/CreateProjectPage";
 import ReportsPage from "./pages/ReportsPage";
 import CommentsPage from "./pages/CommentsPage";
 
+/* ---------- Role Dashboards ---------- */
+import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import ManagerDashboard from "./pages/dashboard/ManagerDashboard";
+import UserDashboard from "./pages/dashboard/UserDashboard";
+
+/* ---------- Protection ---------- */
+import ProtectedRoute from "./routes/ProtectedRoute";
+
 export default function App() {
   return (
-    <AppProvider>
-      <Routes>
-        {/* ---------- Auth ---------- */}
-        <Route path="/" element={<Navigate to="/login" />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+    <Routes>
+      {/* ---------- Auth ---------- */}
+      <Route path="/" element={<Navigate to="/login" />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
 
-        {/* ---------- Dashboard ---------- */}
-        <Route path="/dashboard" element={<Dashboard />} />
+      {/* ---------- Role Dashboards ---------- */}
+      <Route
+        path="/dashboard/admin"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ---------- Projects ---------- */}
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:projectId" element={<ProjectReports />} />
+      <Route
+        path="/dashboard/manager"
+        element={
+          <ProtectedRoute allowedRoles={["MANAGER"]}>
+            <ManagerDashboard />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ✅ Tickets (PROJECT SCOPED) */}
-        <Route
-          path="/projects/:projectId/tickets"
-          element={<TicketListPage />}
-        />
+      <Route
+        path="/dashboard/user"
+        element={
+          <ProtectedRoute allowedRoles={["USER"]}>
+            <UserDashboard />
+          </ProtectedRoute>
+        }
+      />
 
-        <Route
-          path="/projects/:projectId/create-ticket"
-          element={<CreateTicketPage />}
-        />
+      {/* ---------- Generic Dashboard Redirect ---------- */}
+      <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* ---------- Ticket Details ---------- */}
-        <Route path="/tickets/:ticketId" element={<TicketDetails />} />
-        <Route
-          path="/tickets/:ticketId/comments"
-          element={<CommentsPage />}
-        />
+      {/* ---------- Projects ---------- */}
+      <Route
+        path="/projects"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "USER"]}>
+            <Projects />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ---------- Kanban ---------- */}
-      <Route path="/projects/:projectId/kanban" element={<KanbanBoard />} />
+      <Route
+        path="/projects/:projectId"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <ProjectReports />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ---------- Others ---------- */}
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/create-project" element={<CreateProjectPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
+      {/* ---------- Tickets ---------- */}
+      <Route
+        path="/projects/:projectId/tickets"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "USER"]}>
+            <TicketListPage />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* ---------- Safety ---------- */}
-        <Route path="*" element={<Navigate to="/dashboard" />} />
-      </Routes>
-    </AppProvider>
+      <Route
+        path="/projects/:projectId/create-ticket"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <CreateTicketPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tickets/:ticketId"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "USER"]}>
+            <TicketDetails />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/tickets/:ticketId/comments"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "USER"]}>
+            <CommentsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ---------- Kanban ---------- */}
+      <Route
+        path="/projects/:projectId/kanban"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
+            <KanbanBoard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ---------- Others ---------- */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "USER"]}>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/create-project"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <CreateProjectPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <ReportsPage />
+          </ProtectedRoute>
+        }
+      />
+
+     
+
+      {/* ---------- Fallback ---------- */}
+      <Route path="*" element={<Navigate to="/dashboard" />} />
+    </Routes>
   );
 }

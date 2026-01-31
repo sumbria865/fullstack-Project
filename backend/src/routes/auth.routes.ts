@@ -9,5 +9,4 @@ router.post("/register", register);
 // POST /api/auth/login → Authenticates user and returns JWT
 router.post("/login", login);
 
-
 export default router;

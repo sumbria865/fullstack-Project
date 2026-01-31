@@ -20,6 +20,17 @@ export const getTickets = async (projectId?: string) => {
   // fallback safety
   return [];
 };
+/* ======================================================
+   FETCH SINGLE TICKET (BY ID)
+   ====================================================== */
+export const getTicketById = async (ticketId: string) => {
+  if (!ticketId || ticketId === "tickets") {
+    throw new Error("Invalid ticketId");
+  }
+
+  const res = await api.get(`/tickets/${ticketId}`);
+  return res.data;
+};
 
 /* ======================================================
    CREATE TICKET

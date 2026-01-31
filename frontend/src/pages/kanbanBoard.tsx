@@ -4,12 +4,13 @@ import {
   DndContext,
   closestCorners,
   DragEndEvent,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
+  useSortable,
 } from "@dnd-kit/sortable";
-import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import api from "../services/api";
 
@@ -21,6 +22,13 @@ type Ticket = {
   title: string;
   status: Status;
   priority: "LOW" | "MEDIUM" | "HIGH";
+};
+
+/* ---------- Status Styles ---------- */
+const statusStyles: Record<Status, string> = {
+  TODO: "border-blue-400 bg-blue-50",
+  IN_PROGRESS: "border-yellow-400 bg-yellow-50",
+  DONE: "border-green-400 bg-green-50",
 };
 
 /* ---------- Main ---------- */
@@ -35,7 +43,7 @@ export default function KanbanBoard() {
     if (!projectId) return;
 
     api
-      .get("/tickets", { params: { projectId } }) // ✅ FIX
+      .get("/tickets", { params: { projectId } })
       .then((res) => setTickets(res.data))
       .catch(() => alert("Failed to load tickets"))
       .finally(() => setLoading(false));
@@ -46,7 +54,8 @@ export default function KanbanBoard() {
     if (!over) return;
 
     const ticketId = active.id as string;
-    const newStatus = over.id as Status;
+    const newStatus = over.data.current?.status as Status;
+    if (!newStatus) return;
 
     setTickets((prev) =>
       prev.map((t) =>
@@ -55,7 +64,7 @@ export default function KanbanBoard() {
     );
 
     try {
-      await api.patch(`/tickets/${ticketId}`, {
+      await api.patch(`/tickets/${ticketId}/status`, {
         status: newStatus,
       });
     } catch {
@@ -67,19 +76,25 @@ export default function KanbanBoard() {
     tickets.filter((t) => t.status === status);
 
   if (loading) {
-    return <p className="p-6 text-center">Loading Kanban...</p>;
+    return (
+      <p className="p-6 text-center text-gray-500">
+        Loading Kanban Board...
+      </p>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Kanban Board</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">
+          Kanban Board
+        </h1>
         <button
           onClick={() => navigate(`/projects/${projectId}/tickets`)}
-          className="text-blue-600 hover:underline"
+          className="text-sm md:text-base text-blue-600 hover:underline"
         >
-          ← Back to Tickets
+          ← Back
         </button>
       </div>
 
@@ -87,14 +102,22 @@ export default function KanbanBoard() {
         collisionDetection={closestCorners}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Column id="TODO" title="TODO" tickets={byStatus("TODO")} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <Column
+            id="TODO"
+            title="TODO"
+            tickets={byStatus("TODO")}
+          />
           <Column
             id="IN_PROGRESS"
             title="IN PROGRESS"
             tickets={byStatus("IN_PROGRESS")}
           />
-          <Column id="DONE" title="DONE" tickets={byStatus("DONE")} />
+          <Column
+            id="DONE"
+            title="DONE"
+            tickets={byStatus("DONE")}
+          />
         </div>
       </DndContext>
     </div>
@@ -111,14 +134,31 @@ function Column({
   title: string;
   tickets: Ticket[];
 }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id,
+    data: { status: id },
+  });
+
   return (
     <SortableContext
       id={id}
       items={tickets.map((t) => t.id)}
       strategy={verticalListSortingStrategy}
     >
-      <div className="bg-slate-100 rounded-xl p-4 min-h-[400px]">
-        <h2 className="font-semibold mb-4">{title}</h2>
+      <div
+        ref={setNodeRef}
+        className={`rounded-xl border-2 p-4 min-h-[420px] transition ${
+          statusStyles[id]
+        } ${isOver ? "ring-2 ring-black/20" : ""}`}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-semibold text-sm">
+            {title}
+          </h2>
+          <span className="text-xs bg-white px-2 py-0.5 rounded-full shadow">
+            {tickets.length}
+          </span>
+        </div>
 
         <div className="space-y-3">
           {tickets.map((ticket) => (
@@ -126,7 +166,9 @@ function Column({
           ))}
 
           {tickets.length === 0 && (
-            <p className="text-sm text-gray-400">No tickets</p>
+            <p className="text-xs text-gray-400 text-center mt-10">
+              Drag tickets here
+            </p>
           )}
         </div>
       </div>
@@ -137,8 +179,17 @@ function Column({
 /* ---------- Ticket Card ---------- */
 function TicketCard({ ticket }: { ticket: Ticket }) {
   const navigate = useNavigate();
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: ticket.id });
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: ticket.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -152,10 +203,16 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
       {...attributes}
       {...listeners}
       onClick={() => navigate(`/tickets/${ticket.id}`)}
-      className="bg-white rounded-lg p-3 shadow cursor-pointer hover:shadow-md"
+      className={`bg-white rounded-lg p-3 shadow-sm border hover:shadow-md cursor-pointer transition ${
+        isDragging ? "opacity-50" : ""
+      }`}
     >
-      <h3 className="font-medium">{ticket.title}</h3>
-      <span className="text-xs text-gray-500">{ticket.priority}</span>
+      <h3 className="font-medium text-sm truncate">
+        {ticket.title}
+      </h3>
+      <span className="text-xs text-gray-500">
+        Priority: {ticket.priority}
+      </span>
     </div>
   );
 }

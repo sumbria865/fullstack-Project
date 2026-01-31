@@ -1,29 +1,42 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import api from "../services/api";
 
 interface Comment {
   id: string;
   text: string;
-  userId: string;
+  user?: {
+    name?: string;
+  };
   createdAt: string;
 }
 
-const CommentsPage = () => {
+export default function CommentsPage() {
   const { ticketId } = useParams<{ ticketId: string }>();
+
+  console.log("✅ ticketId from URL:", ticketId);
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
+  // 🔹 Fetch comments
   useEffect(() => {
-    if (!ticketId) return;
+    if (!ticketId) {
+      setError("Invalid Ticket ID");
+      setLoading(false);
+      return;
+    }
 
     const fetchComments = async () => {
       try {
-        const res = await api.get(`/comments?ticketId=${ticketId}`);
+        const res = await api.get(`/tickets/${ticketId}/comments`);
+        console.log("📥 Comments fetched:", res.data);
         setComments(res.data);
-      } catch (err: any) {
-        console.error(err.response?.data || err.message);
+      } catch (err) {
+        console.error("❌ Failed to fetch comments", err);
+        setError("Failed to load comments");
       } finally {
         setLoading(false);
       }
@@ -32,57 +45,83 @@ const CommentsPage = () => {
     fetchComments();
   }, [ticketId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!text || !ticketId) return;
+  // 🔹 Add comment
+  const handleAddComment = async () => {
+    if (!text.trim()) return;
 
     try {
-      const res = await api.post("/comments", { ticketId, text });
+      const res = await api.post(`/tickets/${ticketId}/comments`, {
+        text,
+      });
+
+      console.log("✅ Comment added:", res.data);
+
       setComments((prev) => [...prev, res.data]);
       setText("");
-    } catch (err: any) {
-      console.error(err.response?.data || err.message);
+    } catch (err) {
+      console.error("❌ Failed to add comment", err);
+      alert("Failed to add comment");
     }
   };
 
-  return (
-    <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Comments</h1>
+  // 🔹 UI STATES
+  if (loading) {
+    return <p className="p-6">Loading comments...</p>;
+  }
 
-      <form onSubmit={handleSubmit} className="mb-4 flex gap-2">
+  if (error) {
+    return <p className="p-6 text-red-600">{error}</p>;
+  }
+
+  // 🔹 MAIN UI
+  return (
+    <div className="min-h-screen p-6 max-w-2xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold">Comments</h1>
+
+      {/* Add comment */}
+      <div className="flex gap-2">
         <input
           type="text"
           value={text}
-          placeholder="Add a comment..."
           onChange={(e) => setText(e.target.value)}
-          className="flex-1 border p-2 rounded"
+          placeholder="Write a comment..."
+          className="flex-1 border px-3 py-2 rounded"
         />
         <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 rounded hover:bg-blue-600"
+          onClick={handleAddComment}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           Add
         </button>
-      </form>
+      </div>
 
-      {loading ? (
-        <p>Loading comments...</p>
-      ) : comments.length === 0 ? (
-        <p>No comments yet. Be the first!</p>
+      {/* Comments list */}
+      {comments.length === 0 ? (
+        <p className="text-gray-500">No comments yet. Be the first!</p>
       ) : (
-        <ul className="space-y-2">
-          {comments.map((c) => (
-            <li key={c.id} className="border p-2 rounded">
-              <p>{c.text}</p>
-              <small className="text-gray-500">
-                by {c.userId} | {new Date(c.createdAt).toLocaleString()}
-              </small>
-            </li>
+        <div className="space-y-3">
+          {comments.map((comment) => (
+            <div
+              key={comment.id}
+              className="border rounded p-3 bg-gray-50"
+            >
+              <p>{comment.text}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                — {comment.user?.name || "Unknown user"}
+              </p>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
+
+      {/* Back button */}
+      <Link
+  to="/tickets"
+  className="inline-block text-blue-600 hover:underline"
+>
+  ← Back to Tickets
+</Link>
+
     </div>
   );
-};
-
-export default CommentsPage;
+}

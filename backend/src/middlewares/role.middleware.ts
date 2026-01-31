@@ -2,8 +2,10 @@ import { Response, NextFunction } from "express";
 
 export const allowRoles = (...roles: string[]) => {
   return (req: any, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: "Access denied: insufficient permissions",
+      });
     }
     next();
   };

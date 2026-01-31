@@ -1,42 +1,32 @@
 import api from "./api";
 
-/* ---------------- REGISTER ---------------- */
-export const register = async (data: {
-  name?: string;
+interface LoginPayload {
   email: string;
   password: string;
-}) => {
-  try {
-    const res = await api.post("/auth/register", data);
+}
 
-    // ❌ DO NOT SAVE TOKEN ON REGISTER
-    return { success: true, data: res.data };
-  } catch (err: any) {
-    return {
-      success: false,
-      message: err.response?.data?.message || "Registration failed"
-    };
-  }
+export const login = async (payload: LoginPayload) => {
+  const res = await api.post("/auth/login", payload);
+
+  const { token, user } = res.data;
+
+  // ✅ Save in localStorage
+  localStorage.setItem("token", token);
+  localStorage.setItem("user", JSON.stringify(user));
+
+  return user;
 };
 
-/* ---------------- LOGIN ---------------- */
-export const login = async (data: {
-  email: string;
-  password: string;
-}) => {
-  try {
-    const res = await api.post("/auth/login", data);
+export const logout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+};
 
-    // ✅ SAVE TOKEN ONLY ON LOGIN
-    if (res.data.token) {
-      localStorage.setItem("token", res.data.token);
-    }
+export const getCurrentUser = () => {
+  const user = localStorage.getItem("user");
+  return user ? JSON.parse(user) : null;
+};
 
-    return { success: true, data: res.data };
-  } catch (err: any) {
-    return {
-      success: false,
-      message: err.response?.data?.message || "Login failed"
-    };
-  }
+export const getToken = () => {
+  return localStorage.getItem("token");
 };

@@ -42,7 +42,12 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
         />
       )}
 
-      <aside className={`fixed md:static z-50 h-full w-64 bg-slate-900`}>
+      <aside
+        className={`fixed md:static z-50 h-full w-64 bg-slate-900
+        transform transition-transform duration-300
+        ${open ? "translate-x-0" : "-translate-x-full"}
+        md:translate-x-0`}
+      >
         <div className="flex items-center justify-between px-4 py-4 border-b border-slate-700">
           <h2 className="text-lg font-bold text-white">🐞 Bug Tracker</h2>
           <button className="md:hidden text-white" onClick={onClose}>
@@ -54,6 +59,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           <div className="p-4 space-y-2 text-sm">
             <Link
               to="/dashboard"
+              onClick={onClose}
               className={`flex items-center gap-3 p-2 rounded ${isActive(
                 "/dashboard"
               )}`}
@@ -64,6 +70,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
 
             <Link
               to="/projects"
+              onClick={onClose}
               className={`flex items-center gap-3 p-2 rounded ${isActive(
                 "/projects"
               )}`}
@@ -72,8 +79,10 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
               Projects
             </Link>
 
+            {/* ✅ FIXED KANBAN */}
             <Link
               to={kanbanPath}
+              onClick={onClose}
               className={`flex items-center gap-3 p-2 rounded ${isActive(
                 "/projects"
               )}`}
@@ -84,6 +93,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
 
             <Link
               to="/profile"
+              onClick={onClose}
               className={`flex items-center gap-3 p-2 rounded ${isActive(
                 "/profile"
               )}`}

@@ -1,36 +1,35 @@
 import { useState } from "react";
-import { register } from "../services/auth.service";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import Input from "../components/ui/Input";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import api from "../services/api";
 
-
-const Register = () => {
+export default function Register() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
-
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  /* ---------- Handle Input Changes ---------- */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  /* ---------- Handle Form Submission ---------- */
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
-      const user = await register(form); // backend call
-      if (user) {
-        navigate("/login"); // redirect to login page
-      }
+      await api.post("/auth/register", {
+        name,
+        email,
+        password,
+      });
+
+      setSuccess("Account created successfully! Redirecting...");
+      setTimeout(() => navigate("/login"), 1500);
     } catch (err: any) {
       setError(err.response?.data?.message || "Registration failed");
     } finally {
@@ -39,14 +38,9 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-6 sm:p-8">
-        <h2 className="text-2xl font-bold text-center mb-2">
-          Create an account
-        </h2>
-        <p className="text-sm text-gray-500 text-center mb-6">
-          Start managing bugs like a pro
-        </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+      <Card className="w-full max-w-sm">
+        <h2 className="text-2xl font-bold text-center mb-6">Create Account</h2>
 
         {error && (
           <div className="bg-red-100 text-red-600 text-sm p-2 rounded mb-4">
@@ -54,54 +48,50 @@ const Register = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            name="name"
-            placeholder="Full Name"
+        {success && (
+          <div className="bg-green-100 text-green-600 text-sm p-2 rounded mb-4">
+            {success}
+          </div>
+        )}
+
+        <form onSubmit={submit} className="space-y-4">
+          <Input
+            label="Name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             required
-            onChange={handleChange}
-            value={form.name}
-            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-          <input
-            name="email"
+          <Input
+            label="Email"
             type="email"
-            placeholder="Email address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
-            onChange={handleChange}
-            value={form.email}
-            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-          <input
-            name="password"
+          <Input
+            label="Password"
             type="password"
-            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
-            onChange={handleChange}
-            value={form.password}
-            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            {loading ? "Creating account..." : "Register"}
-          </button>
+          <Button loading={loading}>Register</Button>
         </form>
 
         <p className="text-sm text-center mt-6 text-gray-600">
           Already have an account?{" "}
-          <Link to="/login" className="text-blue-600 font-medium hover:underline">
+          <Link
+            to="/login"
+            className="text-blue-600 font-medium hover:underline"
+          >
             Login
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   );
-};
-
-export default Register;
+}

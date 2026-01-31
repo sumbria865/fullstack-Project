@@ -1,24 +1,28 @@
 import { Request, Response } from "express";
 import prisma from "../prisma";
+import { hashPassword, comparePassword } from "../utils/password";
 
-/**
- * Get current logged-in user's profile
- * Route: GET /api/users/me
- */
-export const getProfile = async (req: any, res: Response) => {
+/* ======================
+   GET LOGGED-IN USER
+   ====================== */
+export const getProfile = async (req: Request, res: Response) => {
   try {
-    // User id comes from JWT middleware
+    // @ts-ignore
     const userId = req.user.id;
 
-    // Fetch user from database
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
         name: true,
         email: true,
-        role: true
-      }
+        role: true,
+        phone: true,
+        location: true,
+        bio: true,
+        activityDays: true,
+        createdAt: true,
+      },
     });
 
     if (!user) {
@@ -28,34 +32,201 @@ export const getProfile = async (req: any, res: Response) => {
     res.status(200).json(user);
   } catch (error) {
     console.error("Get profile error:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Failed to load profile" });
   }
 };
 
-/**
- * Update current user's profile
- * Route: PUT /api/users/me
- */
-export const updateProfile = async (req: any, res: Response) => {
+/* ======================
+   UPDATE PROFILE
+   ====================== */
+export const updateProfile = async (req: Request, res: Response) => {
   try {
+    // @ts-ignore
     const userId = req.user.id;
-    const { name } = req.body;
 
-    // Update only allowed fields
+    const { name, phone, location, bio } = req.body;
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { name },
+      data: {
+        name,
+        phone,
+        location,
+        bio,
+      },
       select: {
         id: true,
         name: true,
         email: true,
-        role: true
-      }
+        role: true,
+        phone: true,
+        location: true,
+        bio: true,
+      },
     });
 
     res.status(200).json(updatedUser);
   } catch (error) {
     console.error("Update profile error:", error);
-    res.status(500).json({ message: "Update failed" });
+    res.status(500).json({ message: "Failed to update profile" });
+  }
+};
+
+/* ======================
+   CHANGE EMAIL
+   ====================== */
+export const changeEmail = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const userId = req.user.id;
+
+    const { newEmail, password } = req.body;
+
+    if (!newEmail || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const validPassword = await comparePassword(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    const emailExists = await prisma.user.findUnique({
+      where: { email: newEmail },
+    });
+
+    if (emailExists) {
+      return res.status(409).json({ message: "Email already in use" });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { email: newEmail },
+    });
+
+    res.status(200).json({ message: "Email updated successfully" });
+  } catch (error) {
+    console.error("Change email error:", error);
+    res.status(500).json({ message: "Failed to change email" });
+  }
+};
+
+/* ======================
+   CHANGE PASSWORD
+   ====================== */
+export const changePassword = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const userId = req.user.id;
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Current and new password required" });
+    }
+
+    if (newPassword.length < 8) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 8 characters" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const validPassword = await comparePassword(
+      currentPassword,
+      user.password
+    );
+
+    if (!validPassword) {
+      return res.status(401).json({ message: "Invalid current password" });
+    }
+
+    const hashed = await hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({ message: "Failed to change password" });
+  }
+};
+
+/* ======================
+   GET ACTIVITY DAYS
+   ====================== */
+export const getActivity = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { activityDays: true },
+    });
+
+    res.status(200).json(user?.activityDays || []);
+  } catch (error) {
+    console.error("Get activity error:", error);
+    res.status(500).json({ message: "Failed to fetch activity" });
+  }
+};
+
+/* ======================
+   TOGGLE ACTIVITY DAY
+   ====================== */
+export const toggleActivity = async (req: Request, res: Response) => {
+  try {
+    const { date } = req.body;
+
+    if (!date) {
+      return res.status(400).json({ message: "Date required" });
+    }
+
+    // @ts-ignore
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const days = user.activityDays || [];
+    const updatedDays = days.includes(date)
+      ? days.filter((d) => d !== date)
+      : [...days, date];
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { activityDays: updatedDays },
+    });
+
+    res.status(200).json(updatedDays);
+  } catch (error) {
+    console.error("Toggle activity error:", error);
+    res.status(500).json({ message: "Failed to update activity" });
   }
 };

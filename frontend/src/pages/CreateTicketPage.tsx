@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../services/api";
+import { createTicket } from "../services/ticket.service";
 
 export default function CreateTicketPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -12,23 +12,23 @@ export default function CreateTicketPage() {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !projectId) return;
 
     try {
       setLoading(true);
 
-      await api.post("/tickets", {
+      // ✅ FIX: pass a SINGLE object
+      await createTicket({
         title,
         description,
         priority,
         projectId,
       });
 
-      // ✅ Smooth redirect back to tickets
       navigate(`/projects/${projectId}/tickets`);
     } catch (err) {
-      console.error(err);
-      alert("Failed to create ticket");
+      console.error("Create ticket failed:", err);
+      alert("Failed to create ticket. Check console for details.");
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,6 @@ export default function CreateTicketPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
       <div className="bg-white w-full max-w-lg rounded-xl shadow-lg p-6 space-y-6">
-        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold">Create Ticket</h1>
           <p className="text-sm text-gray-500">
@@ -45,7 +44,6 @@ export default function CreateTicketPage() {
           </p>
         </div>
 
-        {/* Title */}
         <div>
           <label className="text-sm font-medium">Title</label>
           <input
@@ -56,7 +54,6 @@ export default function CreateTicketPage() {
           />
         </div>
 
-        {/* Description */}
         <div>
           <label className="text-sm font-medium">Description</label>
           <textarea
@@ -68,13 +65,13 @@ export default function CreateTicketPage() {
           />
         </div>
 
-        {/* Priority */}
         <div>
           <label className="text-sm font-medium">Priority</label>
           <div className="flex gap-3 mt-2">
             {(["LOW", "MEDIUM", "HIGH"] as const).map((p) => (
               <button
                 key={p}
+                type="button"
                 onClick={() => setPriority(p)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition
                   ${
@@ -85,8 +82,7 @@ export default function CreateTicketPage() {
                         ? "bg-yellow-500 text-white border-yellow-500"
                         : "bg-green-600 text-white border-green-600"
                       : "bg-white text-gray-600 hover:bg-gray-100"
-                  }
-                `}
+                  }`}
               >
                 {p}
               </button>
@@ -94,18 +90,19 @@ export default function CreateTicketPage() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex justify-end gap-3 pt-4">
           <button
+            type="button"
             onClick={() => navigate(-1)}
             className="border px-4 py-2 rounded-lg"
           >
             Cancel
           </button>
 
-          <button
+            <button
+            type="button"
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || !title.trim()}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg disabled:opacity-50"
           >
             {loading ? "Creating..." : "Create Ticket"}

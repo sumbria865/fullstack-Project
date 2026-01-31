@@ -7,8 +7,8 @@ import userRoutes from "./routes/user.routes";
 import projectRoutes from "./routes/project.routes";
 import ticketRoutes from "./routes/ticket.routes";
 import commentRoutes from "./routes/comment.routes";
-
 import { protect } from "./middlewares/auth.middleware";
+//import devRoutes from "./routes/dev.routes";
 
 dotenv.config();
 
@@ -18,7 +18,6 @@ const app: Application = express();
    MIDDLEWARES
    ======================= */
 
-// ✅ CORS (frontend ports allowed)
 app.use(
   cors({
     origin: ["http://localhost:5173", "http://localhost:5174"],
@@ -26,11 +25,9 @@ app.use(
   })
 );
 
-// ✅ Body parsers
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
-// ✅ Debug middleware (ONLY logs body when present)
 app.use((req, _res, next) => {
   if (req.method !== "GET" && Object.keys(req.body || {}).length > 0) {
     console.log("Parsed body:", req.body);
@@ -42,14 +39,19 @@ app.use((req, _res, next) => {
    ROUTES
    ======================= */
 
-// Auth (public)
+// Public
 app.use("/api/auth", authRoutes);
 
-// Protected routes
-app.use("/api/users", protect, userRoutes);
+// Protected
 app.use("/api/projects", protect, projectRoutes);
-app.use("/api/tickets",  ticketRoutes); // ✅ IMPORTANT FIX
-app.use("/api/comments", protect, commentRoutes);
+app.use("/api/tickets", protect, ticketRoutes); // change here
+app.use("/api/users", protect, userRoutes);
+
+// Comments (ticket-scoped)
+app.use("/api", protect, commentRoutes);
+//app.use("/api/dev", devRoutes);
+
+
 
 /* =======================
    HEALTH CHECK
@@ -59,17 +61,16 @@ app.get("/", (_req: Request, res: Response) => {
   res.status(200).send("API running...");
 });
 
+
+
 /* =======================
-   DASHBOARD TEST ROUTE
+   DASHBOARD TEST
    ======================= */
 
-app.get("/api/dashboard", protect, (req: Request, res: Response) => {
-  // @ts-ignore
-  const user = req.user;
-
+app.get("/api/dashboard", protect, (req: any, res: Response) => {
   res.status(200).json({
-    message: `Welcome to your dashboard, ${user?.email}`,
-    user,
+    message: `Welcome to your dashboard, ${req.user?.email}`,
+    user: req.user,
   });
 });
 

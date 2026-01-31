@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
+import React from "react";
 
 /* ======================================================
    TYPES
@@ -11,12 +12,19 @@ type Project = {
   createdAt: string;
 };
 
+type User = {
+  role: "ADMIN" | "MANAGER" | "USER";
+};
+
 /* ======================================================
    MAIN COMPONENT
    ====================================================== */
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+
+  /* 🔐 Auth user (from token payload or API) */
+  const [user, setUser] = useState<User | null>(null);
 
   /* ---------- Modal States ---------- */
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -26,26 +34,32 @@ export default function Projects() {
   const [form, setForm] = useState({ name: "", description: "" });
 
   /* ======================================================
-     🔵 FETCH PROJECTS FROM BACKEND
+     🔵 FETCH USER + PROJECTS
      ====================================================== */
   useEffect(() => {
-    const fetchProjects = async () => {
-      setLoading(true);
+    const fetchData = async () => {
       try {
+        setLoading(true);
+
+        // 👤 get logged-in user
+        const me = await api.get<User>("/auth/me");
+        setUser(me.data);
+
+        // 📦 get projects
         const res = await api.get<Project[]>("/projects");
         setProjects(res.data);
       } catch (error) {
-        console.error("Failed to fetch projects", error);
+        console.error("Failed to load data", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProjects();
+    fetchData();
   }, []);
 
   /* ======================================================
-     🔵 CREATE PROJECT
+     🔵 CREATE PROJECT (ADMIN / MANAGER)
      ====================================================== */
   const addProject = async () => {
     if (!form.name.trim()) return alert("Project name required!");
@@ -56,7 +70,7 @@ export default function Projects() {
       setShowCreateModal(false);
     } catch (error) {
       console.error(error);
-      alert("Failed to create project");
+      alert("Access denied");
     }
   };
 
@@ -76,26 +90,30 @@ export default function Projects() {
       setShowEditModal(false);
     } catch (error) {
       console.error(error);
-      alert("Failed to update project");
+      alert("Access denied");
     }
   };
 
   /* ======================================================
-     🔵 DELETE PROJECT
+     🔵 DELETE PROJECT (ADMIN ONLY)
      ====================================================== */
   const deleteProject = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this project?")) return;
+    if (!confirm("Are you sure?")) return;
     try {
       await api.delete(`/projects/${id}`);
       setProjects(projects.filter((p) => p._id !== id));
     } catch (error) {
       console.error(error);
-      alert("Failed to delete project");
+      alert("Access denied");
     }
   };
 
   if (loading) {
-    return <div className="text-center mt-10 text-gray-600">Loading projects...</div>;
+    return (
+      <div className="text-center mt-10 text-gray-600">
+        Loading projects...
+      </div>
+    );
   }
 
   /* ======================================================
@@ -106,50 +124,63 @@ export default function Projects() {
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-xl shadow">
         <h1 className="text-3xl font-bold">Projects</h1>
-        <p className="text-sm opacity-90">Manage and track all your projects</p>
+        <p className="text-sm opacity-90">
+          Manage and track all your projects
+        </p>
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
+      {user?.role !== "USER" && (
         <button
           onClick={() => setShowCreateModal(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
         >
           + New Project
         </button>
-      </div>
+      )}
 
       {/* Project List */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
         {projects.map((p) => (
           <div
             key={p._id}
-            className="bg-white rounded-xl shadow p-4 hover:shadow-md transition flex flex-col justify-between"
+            className="bg-white rounded-xl shadow p-4 flex flex-col justify-between"
           >
             <div>
-              <h2 className="font-semibold text-lg text-gray-800">{p.name}</h2>
-              <p className="text-sm text-gray-500 mt-1 line-clamp-3">
+              <h2 className="font-semibold text-lg text-gray-800">
+                {p.name}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
                 {p.description || "No description"}
               </p>
             </div>
-            <div className="flex justify-end gap-2 mt-3">
-              <button
-                onClick={() => {
-                  setSelectedProject(p);
-                  setForm({ name: p.name, description: p.description || "" });
-                  setShowEditModal(true);
-                }}
-                className="text-blue-600 hover:underline"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => deleteProject(p._id)}
-                className="text-red-600 hover:underline"
-              >
-                Delete
-              </button>
-            </div>
+
+            {user?.role !== "USER" && (
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    setSelectedProject(p);
+                    setForm({
+                      name: p.name,
+                      description: p.description || "",
+                    });
+                    setShowEditModal(true);
+                  }}
+                  className="text-blue-600 hover:underline"
+                >
+                  Edit
+                </button>
+
+                {user.role === "ADMIN" && (
+                  <button
+                    onClick={() => deleteProject(p._id)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -183,7 +214,7 @@ export default function Projects() {
 }
 
 /* ======================================================
-   MODAL COMPONENT
+   MODAL
    ====================================================== */
 function ProjectModal({
   title,
@@ -194,36 +225,42 @@ function ProjectModal({
 }: {
   title: string;
   form: { name: string; description: string };
-  setForm: React.Dispatch<React.SetStateAction<{ name: string; description: string }>>;
+  setForm: React.Dispatch<
+    React.SetStateAction<{ name: string; description: string }>
+  >;
   onClose: () => void;
   onSubmit: () => void;
 }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl w-full max-w-md p-6 shadow-lg">
+      <div className="bg-white rounded-xl w-full max-w-md p-6">
         <h2 className="text-xl font-bold mb-4">{title}</h2>
 
         <input
           value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, name: e.target.value })
+          }
           placeholder="Project Name"
-          className="border rounded w-full px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="border rounded w-full px-3 py-2 mb-3"
         />
 
         <textarea
           value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, description: e.target.value })
+          }
           placeholder="Project Description"
-          className="border rounded w-full px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          className="border rounded w-full px-3 py-2 mb-4"
         />
 
         <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="border px-4 py-2 rounded hover:bg-gray-100">
+          <button onClick={onClose} className="border px-4 py-2 rounded">
             Cancel
           </button>
           <button
             onClick={onSubmit}
-            className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+            className="bg-indigo-600 text-white px-4 py-2 rounded"
           >
             Save
           </button>
