@@ -1,29 +1,54 @@
 import api from "./api";
 
+/* =========================
+   GET PROJECTS
+========================= */
 export const getProjects = async () => {
-  const token = localStorage.getItem("token"); // JWT saved at login
-  if (!token) throw new Error("No token found");
+  const res = await api.get("/projects");
+  return res.data;
+};
 
-  const res = await api.get("/projects", {
-    headers: { Authorization: `Bearer ${token}` },
+/* =========================
+   CREATE PROJECT (ADMIN)
+========================= */
+export const createProject = async (
+  name: string,
+  description?: string
+) => {
+  const res = await api.post("/projects", {
+    name,
+    description,
   });
   return res.data;
 };
 
-export const createProject = async (name: string, description: string) => {
-  const token = localStorage.getItem("token");
-  const res = await api.post(
-    "/projects",
-    { name, description },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.data;
-};
-
+/* =========================
+   DELETE PROJECT (ADMIN)
+========================= */
 export const deleteProject = async (id: string) => {
-  const token = localStorage.getItem("token");
-  const res = await api.delete(`/projects/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
+  const res = await api.delete(`/projects/${id}`);
+  return res.data;
+};
+
+/* =========================
+   ASSIGN PROJECT TO MANAGER
+   (ADMIN only)
+========================= */
+export const assignProjectToManager = async (
+  projectId: string,
+  managerId: string
+) => {
+  const res = await api.post("/projects/assign", {
+    projectId,
+    managerId,
   });
   return res.data;
+};
+
+/* =========================
+   GET USERS OF A PROJECT
+========================= */
+export const getUsers = async (projectId: string) => {
+  const res = await api.get(`/projects/${projectId}/users`);
+  return res.data; // Should be an array of users [{ id, name }]
 };

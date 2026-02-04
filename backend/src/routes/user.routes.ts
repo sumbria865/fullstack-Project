@@ -10,14 +10,27 @@ import {
   changePassword,
   getActivity,
   toggleActivity,
+  getUsersForAssign,
 } from "../controllers/user.controller";
 
 const router = Router();
 
-/**
- * USER PROFILE
- * ADMIN, MANAGER, USER
- */
+/* =====================================================
+   GET USERS FOR TICKET ASSIGNMENT
+   ADMIN / MANAGER ONLY
+   ❌ USER CANNOT ACCESS
+===================================================== */
+router.get(
+  "/",
+  protect,
+  allowRoles(UserRole.ADMIN, UserRole.MANAGER),
+  getUsersForAssign
+);
+
+/* =====================================================
+   USER PROFILE (SELF)
+   ADMIN / MANAGER / USER
+===================================================== */
 router.get(
   "/me",
   protect,
@@ -32,10 +45,9 @@ router.put(
   updateProfile
 );
 
-/**
- * ACCOUNT SETTINGS
- * ADMIN, MANAGER, USER
- */
+/* =====================================================
+   ACCOUNT SETTINGS
+===================================================== */
 router.put(
   "/change-email",
   protect,
@@ -50,10 +62,9 @@ router.put(
   changePassword
 );
 
-/**
- * USER ACTIVITY
- * ADMIN, MANAGER, USER
- */
+/* =====================================================
+   USER ACTIVITY TRACKING
+===================================================== */
 router.get(
   "/activity",
   protect,

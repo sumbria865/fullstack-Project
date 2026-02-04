@@ -8,35 +8,71 @@ import {
   createTicket,
   getTicketById,
   updateTicketStatus,
+  assignTicket,
+  getMyTickets,
+  updateMyTicketStatus,
 } from "../controllers/ticket.controller";
 
 const router = Router();
 
 /* =========================
-   GET ALL TICKETS (by project)
-   ADMIN, MANAGER, USER
+   GET MY TICKETS
+   USER ONLY ✅
+========================= */
+router.get(
+  "/my",
+  protect,
+  allowRoles(UserRole.USER),
+  getMyTickets
+);
+
+/* =========================
+   UPDATE MY TICKET STATUS
+   USER ONLY ✅
+========================= */
+router.patch(
+  "/my/:ticketId/status",
+  protect,
+  allowRoles(UserRole.USER),
+  updateMyTicketStatus
+);
+
+/* =========================
+   GET ALL TICKETS
+   ADMIN, MANAGER
 ========================= */
 router.get(
   "/",
   protect,
-  allowRoles(UserRole.ADMIN, UserRole.MANAGER, UserRole.USER),
+  allowRoles(UserRole.ADMIN, UserRole.MANAGER),
   getTicketsByProject
 );
 
 /* =========================
    CREATE TICKET
-   ADMIN, MANAGER
+   ADMIN ONLY
 ========================= */
 router.post(
   "/",
   protect,
-  allowRoles(UserRole.ADMIN, UserRole.MANAGER),
+  allowRoles(UserRole.ADMIN),
   createTicket
 );
 
 /* =========================
+   ASSIGN TICKET
+   ADMIN ONLY
+========================= */
+router.post(
+  "/assign",
+  protect,
+  allowRoles(UserRole.ADMIN),
+  assignTicket
+);
+
+/* =========================
    GET SINGLE TICKET
-   ADMIN, MANAGER, USER
+   ADMIN, MANAGER, USER (own)
 ========================= */
 router.get(
   "/:ticketId",

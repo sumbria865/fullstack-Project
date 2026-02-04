@@ -11,11 +11,9 @@ import { AppProvider } from "./context/AppContext";
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
     <AuthProvider>
-      <ProjectProvider>
-        <AppProvider>
-          <App />
-        </AppProvider>
-      </ProjectProvider>
+      <AppProvider>
+        <App />
+      </AppProvider>
     </AuthProvider>
   </BrowserRouter>
 );

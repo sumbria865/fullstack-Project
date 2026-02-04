@@ -8,13 +8,26 @@ interface LoginPayload {
 export const login = async (payload: LoginPayload) => {
   const res = await api.post("/auth/login", payload);
 
+  // 🔍 DEBUG: see what backend is sending
+  console.log("LOGIN RESPONSE:", res.data);
+
   const { token, user } = res.data;
 
-  // ✅ Save in localStorage
-  localStorage.setItem("token", token);
-  localStorage.setItem("user", JSON.stringify(user));
+  if (!user?.id || !user?.role) {
+    throw new Error("Invalid login response: missing id or role");
+  }
 
-  return user;
+  const safeUser = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  };
+
+  localStorage.setItem("token", token);
+  localStorage.setItem("user", JSON.stringify(safeUser));
+
+  // Return both so callers can update AuthContext immediately
+  return { user: safeUser, token };
 };
 
 export const logout = () => {

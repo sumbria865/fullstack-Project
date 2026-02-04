@@ -1,11 +1,13 @@
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
   useState,
   ReactNode,
+  useCallback,
 } from "react";
 import api from "../services/api";
+import { useAuth } from "./AuthContext";
 
 /* ================= TYPES ================= */
 
@@ -35,51 +37,54 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 /* ================= PROVIDER ================= */
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth(); // 🔐 auth-aware
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   /* ---------- LOAD PROJECTS ---------- */
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
+    if (!user) return;
+
     try {
       setLoading(true);
       const res = await api.get<Project[]>("/projects");
-      setProjects(res.data);
+      // Ensure projects use `id` field (backend returns `id` from Prisma)
+      setProjects(res.data.map((p: any) => ({ id: p.id, name: p.name, description: p.description })));
     } catch (error: any) {
-      console.error("❌ Failed to load projects:", error?.response?.data || error);
+      console.error(
+        "❌ Failed to load projects:",
+        error?.response?.data || error
+      );
+      // ❌ DO NOT throw — prevent app crash
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  /* ---------- INITIAL LOAD ---------- */
+  /* ---------- LOAD ON LOGIN / CLEAR ON LOGOUT ---------- */
 
   useEffect(() => {
-    loadProjects();
-  }, []);
+    if (user) {
+      loadProjects();
+    } else {
+      setProjects([]);
+    }
+  }, [user, loadProjects]);
 
   /* ---------- CREATE PROJECT ---------- */
 
   const addProject = async (data: CreateProjectInput) => {
-    try {
-      const res = await api.post<Project>("/projects", data);
-      setProjects((prev) => [...prev, res.data]);
-    } catch (error: any) {
-      console.error("❌ Failed to create project:", error?.response?.data || error);
-      throw error;
-    }
+    const res = await api.post<Project>("/projects", data);
+    const p = res.data as any;
+    setProjects((prev) => [...prev, { id: p.id, name: p.name, description: p.description }]);
   };
 
   /* ---------- DELETE PROJECT ---------- */
 
   const deleteProject = async (id: string) => {
-    try {
-      await api.delete(`/projects/${id}`);
-      setProjects((prev) => prev.filter((p) => p.id !== id));
-    } catch (error: any) {
-      console.error("❌ Failed to delete project:", error?.response?.data || error);
-      throw error;
-    }
+    await api.delete(`/projects/${id}`);
+    setProjects((prev) => prev.filter((p) => p.id !== id));
   };
 
   /* ---------- CONTEXT VALUE ---------- */
@@ -103,10 +108,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
 export const useProjects = () => {
   const context = useContext(ProjectContext);
-
   if (!context) {
     throw new Error("useProjects must be used within a ProjectProvider");
   }
-
   return context;
 };

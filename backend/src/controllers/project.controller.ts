@@ -3,23 +3,44 @@ import prisma from "../prisma";
 
 /* =========================
    GET PROJECTS
-   ========================= */
-export const getProjects = async (req: Request, res: Response) => {
+   ADMIN → owned projects
+   MANAGER → member OR assigned ticket
+   USER → assigned ticket
+========================= */
+export const getProjects = async (req: any, res: Response) => {
   try {
-    // @ts-ignore
-    const userId: string = req.user?.id;
+    const { id: userId, role } = req.user;
 
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    if (role === "ADMIN") {
+      const projects = await prisma.project.findMany({
+        where: { ownerId: userId },
+        orderBy: { createdAt: "desc" },
+      });
+      return res.json(projects);
+    }
+
+    if (role === "MANAGER") {
+      const projects = await prisma.project.findMany({
+        where: {
+          OR: [
+            { memberIds: { has: userId } },
+            { tickets: { some: { assigneeId: userId } } },
+          ],
+        },
+        distinct: ["id"],
+        orderBy: { createdAt: "desc" },
+      });
+
+      return res.json(projects);
     }
 
     const projects = await prisma.project.findMany({
       where: {
-        OR: [
-          { ownerId: userId },
-          { memberIds: { has: userId } },
-        ],
+        tickets: {
+          some: { assigneeId: userId },
+        },
       },
+      distinct: ["id"],
       orderBy: { createdAt: "desc" },
     });
 
@@ -32,19 +53,14 @@ export const getProjects = async (req: Request, res: Response) => {
 
 /* =========================
    CREATE PROJECT
-   ========================= */
-export const createProject = async (req: Request, res: Response) => {
+   ADMIN ONLY
+========================= */
+export const createProject = async (req: any, res: Response) => {
   try {
-    // @ts-ignore
-    const { id: userId, role: userRole } = req.user;
+    const { id: userId, role } = req.user;
 
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    // Only ADMIN or MANAGER can create projects
-    if (!["ADMIN", "MANAGER"].includes(userRole)) {
-      return res.status(403).json({ message: "Forbidden: Insufficient role" });
+    if (role !== "ADMIN") {
+      return res.status(403).json({ message: "Only ADMIN can create projects" });
     }
 
     const { name, description } = req.body;
@@ -58,7 +74,7 @@ export const createProject = async (req: Request, res: Response) => {
         name,
         description,
         ownerId: userId,
-        memberIds: [userId],
+        memberIds: [],
       },
     });
 
@@ -70,17 +86,16 @@ export const createProject = async (req: Request, res: Response) => {
 };
 
 /* =========================
-   DELETE PROJECT
-   ========================= */
-export const deleteProject = async (req: Request, res: Response) => {
+   ASSIGN PROJECT TO MANAGER
+   ADMIN ONLY
+========================= */
+export const assignProjectToManager = async (req: any, res: Response) => {
   try {
-    const { id: projectId } = req.params;
+    const { role } = req.user;
+    const { projectId, managerId } = req.body;
 
-    // @ts-ignore
-    const userId: string = req.user?.id;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+    if (role !== "ADMIN") {
+      return res.status(403).json({ message: "Only ADMIN can assign projects" });
     }
 
     const project = await prisma.project.findUnique({
@@ -91,12 +106,48 @@ export const deleteProject = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    // Only owner can delete
-    if (project.ownerId !== userId) {
-      return res.status(403).json({ message: "Forbidden: Not the owner" });
+    const manager = await prisma.user.findUnique({
+      where: { id: managerId },
+    });
+
+    if (!manager || manager.role !== "MANAGER") {
+      return res.status(400).json({ message: "Invalid manager" });
     }
 
-    // Delete related comments
+    if (project.memberIds.includes(managerId)) {
+      return res.status(400).json({ message: "Manager already assigned" });
+    }
+
+    const updatedProject = await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        memberIds: { push: managerId },
+      },
+    });
+
+    res.json({
+      message: "Project assigned to manager successfully",
+      project: updatedProject,
+    });
+  } catch (error) {
+    console.error("ASSIGN PROJECT ERROR:", error);
+    res.status(500).json({ message: "Failed to assign project" });
+  }
+};
+
+/* =========================
+   DELETE PROJECT
+   ADMIN ONLY
+========================= */
+export const deleteProject = async (req: any, res: Response) => {
+  try {
+    const { role } = req.user;
+    const { id: projectId } = req.params;
+
+    if (role !== "ADMIN") {
+      return res.status(403).json({ message: "Only ADMIN can delete projects" });
+    }
+
     const tickets = await prisma.ticket.findMany({
       where: { projectId },
       select: { id: true },
@@ -108,12 +159,10 @@ export const deleteProject = async (req: Request, res: Response) => {
       where: { ticketId: { in: ticketIds } },
     });
 
-    // Delete tickets
     await prisma.ticket.deleteMany({
       where: { projectId },
     });
 
-    // Delete project
     await prisma.project.delete({
       where: { id: projectId },
     });
@@ -122,5 +171,60 @@ export const deleteProject = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("DELETE PROJECT ERROR:", error);
     res.status(500).json({ message: "Failed to delete project" });
+  }
+};
+
+/* =========================
+   GET PROJECT USERS
+   ADMIN / MANAGER
+========================= */
+export const getProjectUsers = async (req: any, res: Response) => {
+  try {
+    const { id: projectId } = req.params;
+
+    // 1️⃣ Get project
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { memberIds: true },
+    });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // 2️⃣ Get users who have tickets in this project
+    const ticketUsers = await prisma.ticket.findMany({
+      where: { projectId },
+      select: {
+        assignee: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    // 3️⃣ Merge memberIds + ticket assignees
+    const userIds = new Set<string>();
+
+    project.memberIds.forEach((id) => userIds.add(id));
+    ticketUsers.forEach((t) => {
+      if (t.assignee?.id) userIds.add(t.assignee.id);
+    });
+
+    // 4️⃣ Fetch users EXCEPT ADMIN
+    const users = await prisma.user.findMany({
+      where: {
+        id: { in: Array.from(userIds) },
+        role: { in: ["MANAGER", "USER"] }, // 🔥 CRITICAL FIX
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    res.json(users);
+  } catch (error) {
+    console.error("GET PROJECT USERS ERROR:", error);
+    res.status(500).json({ message: "Failed to fetch project users" });
   }
 };

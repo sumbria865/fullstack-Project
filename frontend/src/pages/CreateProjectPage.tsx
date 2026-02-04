@@ -6,7 +6,7 @@ import React from "react";
    TYPES
    ====================================================== */
 type Project = {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   createdAt: string;
@@ -47,7 +47,7 @@ export default function Projects() {
 
         // 📦 get projects
         const res = await api.get<Project[]>("/projects");
-        setProjects(res.data);
+        setProjects(res.data.map((p: any) => ({ id: p.id, name: p.name, description: p.description, createdAt: p.createdAt })));
       } catch (error) {
         console.error("Failed to load data", error);
       } finally {
@@ -65,7 +65,8 @@ export default function Projects() {
     if (!form.name.trim()) return alert("Project name required!");
     try {
       const res = await api.post<Project>("/projects", form);
-      setProjects([res.data, ...projects]);
+      const p = res.data as any;
+      setProjects([{ id: p.id, name: p.name, description: p.description, createdAt: p.createdAt }, ...projects]);
       setForm({ name: "", description: "" });
       setShowCreateModal(false);
     } catch (error) {
@@ -80,11 +81,9 @@ export default function Projects() {
   const updateProject = async () => {
     if (!selectedProject) return;
     try {
-      const res = await api.patch<Project>(
-        `/projects/${selectedProject._id}`,
-        form
-      );
-      setProjects(projects.map((p) => (p._id === res.data._id ? res.data : p)));
+      const res = await api.patch<Project>(`/projects/${selectedProject.id}`, form);
+      const updated = res.data as any;
+      setProjects(projects.map((p) => (p.id === updated.id ? { id: updated.id, name: updated.name, description: updated.description, createdAt: updated.createdAt } : p)));
       setSelectedProject(null);
       setForm({ name: "", description: "" });
       setShowEditModal(false);
@@ -101,7 +100,7 @@ export default function Projects() {
     if (!confirm("Are you sure?")) return;
     try {
       await api.delete(`/projects/${id}`);
-      setProjects(projects.filter((p) => p._id !== id));
+      setProjects(projects.filter((p) => p.id !== id));
     } catch (error) {
       console.error(error);
       alert("Access denied");
@@ -143,7 +142,7 @@ export default function Projects() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
         {projects.map((p) => (
           <div
-            key={p._id}
+            key={p.id}
             className="bg-white rounded-xl shadow p-4 flex flex-col justify-between"
           >
             <div>
@@ -173,7 +172,7 @@ export default function Projects() {
 
                 {user.role === "ADMIN" && (
                   <button
-                    onClick={() => deleteProject(p._id)}
+                    onClick={() => deleteProject(p.id)}
                     className="text-red-600 hover:underline"
                   >
                     Delete

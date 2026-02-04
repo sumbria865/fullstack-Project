@@ -34,27 +34,40 @@ export default function ProjectReports() {
 
   /* ---------- Fetch Tickets ---------- */
   useEffect(() => {
-    if (!projectId) return;
+    // ✅ BLOCK invalid route like /projects/create
+    if (!projectId || projectId === "create") {
+      navigate("/projects");
+      return;
+    }
 
-    api
-      .get("/tickets", { params: { projectId } })
-      .then((res) => setTickets(res.data))
-      .catch(() => alert("Failed to load project reports"))
-      .finally(() => setLoading(false));
-  }, [projectId]);
+    const loadReports = async () => {
+      try {
+        const res = await api.get("/tickets", {
+          params: { projectId },
+        });
+        setTickets(res.data);
+      } catch (err: any) {
+        console.error("Failed to load reports", err);
+
+        if (err.response?.status === 401) {
+          navigate("/login");
+        } else if (err.response?.status === 403) {
+          alert("You are not allowed to view this project");
+          navigate("/dashboard");
+        } else {
+          alert("Failed to load project reports");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReports();
+  }, [projectId, navigate]);
 
   /* ---------- Stats ---------- */
-  const statusCounts = {
-    TODO: 0,
-    IN_PROGRESS: 0,
-    DONE: 0,
-  };
-
-  const priorityCounts = {
-    HIGH: 0,
-    MEDIUM: 0,
-    LOW: 0,
-  };
+  const statusCounts = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
+  const priorityCounts = { HIGH: 0, MEDIUM: 0, LOW: 0 };
 
   tickets.forEach((t) => {
     statusCounts[t.status]++;
@@ -91,7 +104,9 @@ export default function ProjectReports() {
     ],
   };
 
-  if (loading) return <p className="p-10 text-center">Loading reports...</p>;
+  if (loading) {
+    return <p className="p-10 text-center">Loading reports...</p>;
+  }
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-blue-50 to-purple-50 space-y-6">
@@ -106,9 +121,7 @@ export default function ProjectReports() {
       {/* Header */}
       <div className="bg-white rounded-xl shadow p-6 text-center">
         <h1 className="text-3xl font-bold">Project Reports</h1>
-        <p className="text-gray-500">
-          Analytics for this project
-        </p>
+        <p className="text-gray-500">Analytics for this project</p>
       </div>
 
       {/* Stats */}

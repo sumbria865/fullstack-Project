@@ -1,31 +1,28 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import React, { JSX } from "react";
+
+type Role = "ADMIN" | "MANAGER" | "USER";
 
 type Props = {
-  allowedRoles: ("ADMIN" | "MANAGER" | "USER")[];
+  allowedRoles: Role[];
   children: JSX.Element;
 };
 
 const ProtectedRoute = ({ allowedRoles, children }: Props) => {
-  const { user, loading } = useAuth();
-  console.log("User = ",user);
-  const token = localStorage.getItem("token");
-  console.log("token=",token);
+  const { user, token } = useAuth();
 
-  if (loading) {
-    return <div className="p-6">Loading...</div>;
-  }
-
-  if (!user) {
+  // 🔐 Not logged in
+  if (!user || !token) {
     return <Navigate to="/login" replace />;
   }
 
-if (!allowedRoles.includes(user.role)) {
-  return <Navigate to="/dashboard" replace />;
-}
+  // 🚫 Role not allowed
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-  
-
+  // ✅ Authorized
   return children;
 };
 

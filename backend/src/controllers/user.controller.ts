@@ -230,3 +230,31 @@ export const toggleActivity = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to update activity" });
   }
 };
+
+/* ======================
+   GET USERS FOR TICKET ASSIGN
+   ADMIN / MANAGER
+====================== */
+export const getUsersForAssign = async (req: Request, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        role: {
+          in: ["MANAGER", "USER"],
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { name: "asc" },
+    });
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("getUsersForAssign error:", error);
+    res.status(500).json({ message: "Failed to load users" });
+  }
+};

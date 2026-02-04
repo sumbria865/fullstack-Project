@@ -3,11 +3,14 @@ import {
   LayoutDashboard,
   FolderKanban,
   Columns3,
+  BarChart3,
   LogOut,
   User,
 } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
+import React from "react";
 
 interface SidebarProps {
   open: boolean;
@@ -18,6 +21,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { activeProjectId } = useAppContext();
+  const { user } = useAuth();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -29,9 +33,23 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
       ? "bg-slate-800 text-white"
       : "text-slate-300 hover:bg-slate-800";
 
-  const kanbanPath = activeProjectId
-    ? `/projects/${activeProjectId}/kanban`
-    : "/projects";
+  const goToKanban = () => {
+    if (!activeProjectId) {
+      alert("Please open a project first from Projects page");
+      return;
+    }
+    navigate(`/projects/${activeProjectId}/kanban`);
+    onClose();
+  };
+
+  const goToReports = () => {
+    if (!activeProjectId) {
+      alert("Please open a project first from Projects page");
+      return;
+    }
+    navigate(`/projects/${activeProjectId}`);
+    onClose();
+  };
 
   return (
     <>
@@ -57,6 +75,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
 
         <nav className="flex flex-col justify-between h-[calc(100%-64px)]">
           <div className="p-4 space-y-2 text-sm">
+            {/* Dashboard */}
             <Link
               to="/dashboard"
               onClick={onClose}
@@ -68,6 +87,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
               Dashboard
             </Link>
 
+            {/* Projects */}
             <Link
               to="/projects"
               onClick={onClose}
@@ -79,18 +99,29 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
               Projects
             </Link>
 
-            {/* ✅ FIXED KANBAN */}
-            <Link
-              to={kanbanPath}
-              onClick={onClose}
-              className={`flex items-center gap-3 p-2 rounded ${isActive(
-                "/projects"
-              )}`}
-            >
-              <Columns3 size={18} />
-              Kanban Board
-            </Link>
+            {/* Reports */}
+            {(user?.role === "ADMIN" || user?.role === "MANAGER") && (
+              <button
+                onClick={goToReports}
+                className="w-full flex items-center gap-3 p-2 rounded text-slate-300 hover:bg-slate-800"
+              >
+                <BarChart3 size={18} />
+                Reports
+              </button>
+            )}
 
+            {/* Kanban */}
+            {(user?.role === "ADMIN" || user?.role === "MANAGER") && (
+              <button
+                onClick={goToKanban}
+                className="w-full flex items-center gap-3 p-2 rounded text-slate-300 hover:bg-slate-800"
+              >
+                <Columns3 size={18} />
+                Kanban Board
+              </button>
+            )}
+
+            {/* Profile */}
             <Link
               to="/profile"
               onClick={onClose}
@@ -103,6 +134,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
             </Link>
           </div>
 
+          {/* Logout */}
           <div className="p-4 border-t border-slate-700">
             <button
               onClick={handleLogout}

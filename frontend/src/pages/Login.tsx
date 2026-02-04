@@ -3,7 +3,9 @@ import { useNavigate, Link } from "react-router-dom";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
-import { login } from "../services/auth.service";
+import { login as loginService } from "../services/auth.service";
+import { useAuth } from "../context/AuthContext";
+import React from "react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,6 +14,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { login: setAuth } = useAuth();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,19 +22,16 @@ export default function Login() {
     setError("");
 
     try {
-      const user = await login({ email, password });
+      const result = await loginService({ email, password });
 
-      // 🔥 Role-based redirect
-      if (user.role === "ADMIN") {
-        navigate("/admin/dashboard");
-      } else if (user.role === "MANAGER") {
-        navigate("/manager/dashboard");
-      } else {
-        navigate("/dashboard");
-      }
+      // update global auth state immediately
+      setAuth({ user: result.user, token: result.token });
+
+      // 🔥 Redirect everyone to the same dashboard
+      navigate("/dashboard");
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      setError(err?.response?.data?.message || err?.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }

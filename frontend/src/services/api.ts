@@ -2,12 +2,12 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: "http://localhost:5000/api",
+  withCredentials: true, // 🔥 VERY IMPORTANT
 });
 
-// ✅ Request interceptor: attach token ONLY if valid
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token"); // 🔁 must match login
 
     if (token && token !== "undefined" && token !== "null") {
       config.headers.Authorization = `Bearer ${token}`;
@@ -20,14 +20,15 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Response interceptor: handle 401 safely
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
+      console.warn("JWT expired or invalid → logging out");
 
-      // 🚨 IMPORTANT: do NOT redirect if already on login
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }

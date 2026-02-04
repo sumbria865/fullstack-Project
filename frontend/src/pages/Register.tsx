@@ -4,6 +4,7 @@ import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import api from "../services/api";
+import React from "react";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("USER");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -26,6 +28,7 @@ export default function Register() {
         name,
         email,
         password,
+        role,
       });
 
       setSuccess("Account created successfully! Redirecting...");
@@ -79,6 +82,20 @@ export default function Register() {
             required
           />
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Role
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-3 py-2 border rounded focus:outline-none"
+            >
+              <option value="USER">User</option>
+              <option value="MANAGER">Manager</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
           <Button loading={loading}>Register</Button>
         </form>
 

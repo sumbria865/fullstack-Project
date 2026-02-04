@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../services/api";
+import React from "react";
 
 interface Ticket {
   id: string;
@@ -9,7 +10,7 @@ interface Ticket {
   priority: "LOW" | "MEDIUM" | "HIGH";
   status: "TODO" | "IN_PROGRESS" | "DONE";
   assignee?: {
-    _id?: string;
+    id?: string;
     name?: string;
   };
   files?: { name: string; url: string }[];

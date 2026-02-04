@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
+import React from "react";
 
 interface PageWrapperProps {
   children: React.ReactNode;

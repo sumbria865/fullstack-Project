@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import React from "react";
 
 /* ---------- Pages ---------- */
 import Login from "./pages/Login";
@@ -10,74 +9,56 @@ import ProjectReports from "./pages/ProjectReports";
 import TicketListPage from "./pages/TicketListPage";
 import TicketDetails from "./pages/TicketDetails";
 import CreateTicketPage from "./pages/CreateTicketPage";
-import KanbanBoard from "./pages/KanbanBoard";
+import KanbanBoard from "./pages/kanbanBoard";
 import Profile from "./pages/Profile";
 import CreateProjectPage from "./pages/CreateProjectPage";
-import ReportsPage from "./pages/ReportsPage";
 import CommentsPage from "./pages/CommentsPage";
 
-/* ---------- Role Dashboards ---------- */
-import AdminDashboard from "./pages/dashboard/AdminDashboard";
-import ManagerDashboard from "./pages/dashboard/ManagerDashboard";
-import UserDashboard from "./pages/dashboard/UserDashboard";
+/* ---------- Context ---------- */
+import { ProjectProvider } from "./context/ProjectContext";
 
 /* ---------- Protection ---------- */
 import ProtectedRoute from "./routes/ProtectedRoute";
+import React from "react";
 
 export default function App() {
   return (
     <Routes>
       {/* ---------- Auth ---------- */}
-      <Route path="/" element={<Navigate to="/login" />} />
+      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* ---------- Role Dashboards ---------- */}
+      {/* ---------- Dashboard ---------- */}
       <Route
-        path="/dashboard/admin"
+        path="/dashboard"
         element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
-            <AdminDashboard />
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "USER"]}>
+            <Dashboard />
           </ProtectedRoute>
         }
       />
-
-      <Route
-        path="/dashboard/manager"
-        element={
-          <ProtectedRoute allowedRoles={["MANAGER"]}>
-            <ManagerDashboard />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/dashboard/user"
-        element={
-          <ProtectedRoute allowedRoles={["USER"]}>
-            <UserDashboard />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* ---------- Generic Dashboard Redirect ---------- */}
-      <Route path="/dashboard" element={<Dashboard />} />
 
       {/* ---------- Projects ---------- */}
       <Route
         path="/projects"
         element={
           <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "USER"]}>
-            <Projects />
+            <ProjectProvider>
+              <Projects />
+            </ProjectProvider>
           </ProtectedRoute>
         }
       />
 
+      {/* ---------- Project Reports (ADMIN / MANAGER) ---------- */}
       <Route
         path="/projects/:projectId"
         element={
           <ProtectedRoute allowedRoles={["ADMIN", "MANAGER"]}>
-            <ProjectReports />
+            <ProjectProvider>
+              <ProjectReports />
+            </ProjectProvider>
           </ProtectedRoute>
         }
       />
@@ -119,7 +100,7 @@ export default function App() {
         }
       />
 
-      {/* ---------- Kanban ---------- */}
+      {/* ---------- Kanban (ADMIN / MANAGER) ---------- */}
       <Route
         path="/projects/:projectId/kanban"
         element={
@@ -129,7 +110,7 @@ export default function App() {
         }
       />
 
-      {/* ---------- Others ---------- */}
+      {/* ---------- Profile ---------- */}
       <Route
         path="/profile"
         element={
@@ -139,6 +120,7 @@ export default function App() {
         }
       />
 
+      {/* ---------- Admin Only ---------- */}
       <Route
         path="/create-project"
         element={
@@ -148,19 +130,8 @@ export default function App() {
         }
       />
 
-      <Route
-        path="/reports"
-        element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
-            <ReportsPage />
-          </ProtectedRoute>
-        }
-      />
-
-     
-
       {/* ---------- Fallback ---------- */}
-      <Route path="*" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }

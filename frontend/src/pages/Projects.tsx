@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "../context/ProjectContext";
 import { useAuth } from "../context/AuthContext";
@@ -6,39 +6,63 @@ import CreateProjectModal from "../components/CreateProjectModal";
 
 export default function Projects() {
   const navigate = useNavigate();
-  const { projects, deleteProject, addProject, fetchProjects, loading } = useProjects();
+
+  // ✅ FIXED: use refreshProjects (NOT fetchProjects)
+  const {
+    projects,
+    deleteProject,
+    addProject,
+    refreshProjects,
+    loading,
+  } = useProjects();
+
   const { user } = useAuth();
 
   const [search, setSearch] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [error, setError] = useState("");
 
-  // Fetch projects on mount
+  /* ================= FETCH PROJECTS ================= */
   useEffect(() => {
     const loadProjects = async () => {
       try {
-        await fetchProjects(); // fetchProjects will use JWT internally
-      } catch (err) {
-        console.error("Failed to load projects:", err);
-        setError("Failed to load projects. Please login again.");
+        await refreshProjects();
+      } catch (err: any) {
+        console.error("Failed to load projects", err);
+
+        if (err.response?.status === 401) {
+          // ❌ Not logged in / token expired
+          navigate("/login");
+        } else if (err.response?.status === 403) {
+          // ❌ Logged in but no permission
+          alert("You are not allowed to access Projects");
+          navigate("/dashboard");
+        } else {
+          setError("Something went wrong. Please try again.");
+        }
       }
     };
-    loadProjects();
-  }, [fetchProjects]);
 
-  const filteredProjects = projects.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+    refreshProjects && loadProjects();
+  }, [refreshProjects, navigate]);
+
+  /* ================= FILTER ================= */
+  const filteredProjects = projects.filter((project) =>
+    project.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  /* ================= RENDER ================= */
   return (
     <div className="space-y-6">
       {/* ================= HEADER ================= */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-xl shadow">
         <h1 className="text-3xl font-bold">Projects</h1>
-        <p className="text-sm opacity-90">Manage and track all your projects</p>
+        <p className="text-sm opacity-90">
+          Manage and track all your projects
+        </p>
       </div>
 
-      {/* ================= ACTIONS ================= */}
+      {/* ================= ACTION BAR ================= */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <input
           type="text"
@@ -48,7 +72,7 @@ export default function Projects() {
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* ✅ CREATE PROJECT (ADMIN + MANAGER) */}
+        {/* ✅ ADMIN & MANAGER ONLY */}
         {user?.role !== "USER" && (
           <button
             onClick={() => setShowCreateModal(true)}
@@ -59,7 +83,7 @@ export default function Projects() {
         )}
       </div>
 
-      {/* ================= PROJECT LIST ================= */}
+      {/* ================= CONTENT ================= */}
       {loading ? (
         <p>Loading projects...</p>
       ) : error ? (
@@ -67,55 +91,56 @@ export default function Projects() {
       ) : filteredProjects.length === 0 ? (
         <p className="text-gray-500">No projects found</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredProjects.map((project) => (
             <div
-              key={project._id}
-              className="aspect-square rounded-xl border bg-gradient-to-br from-slate-50 to-white hover:border-blue-500 hover:shadow-lg transition p-4 flex flex-col justify-between"
+              key={project.id}
+              className="rounded-xl border bg-white hover:border-blue-500 hover:shadow-lg transition p-4 flex flex-col justify-between"
             >
               <div>
-                <h2 className="font-semibold text-lg text-gray-800">{project.name}</h2>
+                <h2 className="font-semibold text-lg text-gray-800">
+                  {project.name}
+                </h2>
                 <p className="text-sm text-gray-600 mt-1 line-clamp-3">
                   {project.description || "No description"}
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <span className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs">
-                  🐞 Tickets
-                </span>
+              <div className="mt-4 flex justify-between items-center">
+                <button
+                  onClick={() =>
+                    navigate(`/projects/${project.id}/tickets`)
+                  }
+                  className="text-sm font-medium text-blue-600 hover:underline"
+                >
+                  View Tickets →
+                </button>
 
-                <div className="flex justify-between items-center">
+                {/* ✅ ADMIN ONLY */}
+                {user?.role === "ADMIN" && (
                   <button
-                    onClick={() => navigate(`/projects/${project._id}/tickets`)}
-                    className="text-sm font-medium text-blue-600 hover:underline"
+                    onClick={() => {
+                      if (confirm("Delete this project?")) {
+                        deleteProject(project.id);
+                      }
+                    }}
+                    className="text-sm font-medium text-red-600 hover:underline"
                   >
-                    View Tickets →
+                    Delete
                   </button>
-
-                  {/* ✅ DELETE PROJECT (ADMIN ONLY) */}
-                  {user?.role === "ADMIN" && (
-                    <button
-                      onClick={() => {
-                        if (confirm("Delete this project?")) {
-                          deleteProject(project._id);
-                        }
-                      }}
-                      className="text-sm font-medium text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ================= CREATE PROJECT MODAL ================= */}
+      {/* ================= CREATE MODAL ================= */}
       {showCreateModal && user?.role !== "USER" && (
-        <CreateProjectModal onClose={() => setShowCreateModal(false)} onCreate={addProject} />
+        <CreateProjectModal
+          onClose={() => setShowCreateModal(false)}
+          onCreate={addProject}
+        />
       )}
     </div>
   );

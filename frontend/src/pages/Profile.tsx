@@ -10,6 +10,7 @@ import {
   Shield,
 } from "lucide-react";
 import api from "../services/api";
+import React from "react";
 
 /* ---------- Types ---------- */
 type UserProfile = {
