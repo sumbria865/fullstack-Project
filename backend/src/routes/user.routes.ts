@@ -49,14 +49,14 @@ router.put(
    ACCOUNT SETTINGS
 ===================================================== */
 router.put(
-  "/change-email",
+  "/me/email",
   protect,
   allowRoles(UserRole.ADMIN, UserRole.MANAGER, UserRole.USER),
   changeEmail
 );
 
 router.put(
-  "/change-password",
+  "/me/password",
   protect,
   allowRoles(UserRole.ADMIN, UserRole.MANAGER, UserRole.USER),
   changePassword

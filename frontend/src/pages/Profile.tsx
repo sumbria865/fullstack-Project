@@ -10,6 +10,7 @@ import {
   Shield,
 } from "lucide-react";
 import api from "../services/api";
+import { changeEmail, changePassword } from "../services/user.service";
 import React from "react";
 
 /* ---------- Types ---------- */
@@ -31,6 +32,13 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+
+  const [emailSaving, setEmailSaving] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -214,22 +222,179 @@ export default function Profile() {
           )}
         </section>
 
-        {/* ================= SECURITY (UI ONLY) ================= */}
-        <section className="bg-white rounded-2xl shadow p-6 space-y-4 opacity-70">
+        {/* ================= SECURITY ================= */}
+        <section className="bg-white rounded-2xl shadow p-6 space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Shield size={18} /> Security (Backend pending)
+            <Shield size={18} /> Account Security
           </h3>
 
-          <p className="text-sm text-gray-500">
-            Email & password change will work once backend routes are added.
-          </p>
+          <div className="flex flex-col gap-6">
+            {/* Email Change */}
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Mail className="text-blue-600" size={20} />
+                  <div>
+                    <p className="font-semibold text-gray-800">Email Address</p>
+                    <p className="text-sm text-gray-600">{user.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEmail((s) => !s);
+                    setError("");
+                    setSuccess("");
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-semibold"
+                >
+                  {showEmail ? "Close" : "Change"}
+                </button>
+              </div>
 
-          <div className="flex items-center gap-2 text-gray-400">
-            <Mail size={18} /> Change Email
-          </div>
+              {showEmail && (
+                <div className="space-y-3 mt-4 pt-4 border-t border-blue-200">
+                  <input
+                    type="email"
+                    placeholder="New email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    className="w-full border border-blue-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full border border-blue-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      disabled={emailSaving}
+                      onClick={async () => {
+                        if (!newEmail || !currentPassword) {
+                          setError("Email and password required");
+                          return;
+                        }
+                        setEmailSaving(true);
+                        setError("");
+                        setSuccess("");
+                        try {
+                          await changeEmail(newEmail, currentPassword);
+                          setSuccess("Email updated successfully");
+                          setShowEmail(false);
+                          setUser({ ...user, email: newEmail });
+                          setNewEmail("");
+                          setCurrentPassword("");
+                        } catch (err: any) {
+                          const msg = err?.response?.data?.message || err?.message || "Failed to update email";
+                          setError(msg);
+                        } finally {
+                          setEmailSaving(false);
+                        }
+                      }}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNewEmail("");
+                        setCurrentPassword("");
+                        setShowEmail(false);
+                      }}
+                      className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-semibold transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
-          <div className="flex items-center gap-2 text-gray-400">
-            <Lock size={18} /> Change Password
+            {/* Password Change */}
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Lock className="text-purple-600" size={20} />
+                  <div>
+                    <p className="font-semibold text-gray-800">Password</p>
+                    <p className="text-sm text-gray-600">Change your password</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowPassword((s) => !s);
+                    setError("");
+                    setSuccess("");
+                  }}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
+                >
+                  {showPassword ? "Close" : "Change"}
+                </button>
+              </div>
+
+              {showPassword && (
+                <div className="space-y-3 mt-4 pt-4 border-t border-purple-200">
+                  <input
+                    type="password"
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full border border-purple-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <input
+                    type="password"
+                    placeholder="New password (min 8 characters)"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full border border-purple-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <div className="flex gap-3">
+                    <button
+                      disabled={passwordSaving}
+                      onClick={async () => {
+                        if (!currentPassword || !newPassword) {
+                          setError("Both passwords are required");
+                          return;
+                        }
+                        if (newPassword.length < 8) {
+                          setError("Password must be at least 8 characters");
+                          return;
+                        }
+                        setPasswordSaving(true);
+                        setError("");
+                        setSuccess("");
+                        try {
+                          await changePassword(currentPassword, newPassword);
+                          setSuccess("Password updated successfully");
+                          setShowPassword(false);
+                          setCurrentPassword("");
+                          setNewPassword("");
+                        } catch (err: any) {
+                          const msg = err?.response?.data?.message || err?.message || "Failed to update password";
+                          setError(msg);
+                        } finally {
+                          setPasswordSaving(false);
+                        }
+                      }}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCurrentPassword("");
+                        setNewPassword("");
+                        setShowPassword(false);
+                      }}
+                      className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg font-semibold transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import prisma from "../prisma/client";
+import prisma from "../prisma";
 
 /* ---------------- GET PROFILE ---------------- */
 export const getMyProfile = async (req: Request, res: Response) => {

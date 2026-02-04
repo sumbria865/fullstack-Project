@@ -1,9 +1,7 @@
 import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../prisma";
 import { ObjectId } from "bson";
-
-const prisma = new PrismaClient();
 
 /* =====================
    AUTH / PROTECT

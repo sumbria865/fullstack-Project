@@ -6,6 +6,7 @@ import {
   BarChart3,
   LogOut,
   User,
+  MessageCircle,
 } from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
@@ -35,7 +36,8 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
 
   const goToKanban = () => {
     if (!activeProjectId) {
-      alert("Please open a project first from Projects page");
+      navigate("/projects");
+      onClose();
       return;
     }
     navigate(`/projects/${activeProjectId}/kanban`);
@@ -44,7 +46,8 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
 
   const goToReports = () => {
     if (!activeProjectId) {
-      alert("Please open a project first from Projects page");
+      navigate("/projects");
+      onClose();
       return;
     }
     navigate(`/projects/${activeProjectId}`);
@@ -131,6 +134,17 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
             >
               <User size={18} />
               Profile
+            </Link>
+
+            {/* Comments Test (Demo) */}
+            <Link
+              to="/comments/67777777777777777777777d"
+              onClick={onClose}
+              className={`flex items-center gap-3 p-2 rounded text-slate-300 hover:bg-slate-800 bg-green-900 text-green-200`}
+              title="Test comments feature"
+            >
+              <MessageCircle size={18} />
+              💬 Test Comments
             </Link>
           </div>
 

@@ -28,4 +28,8 @@ router.put(
   updateMyProfile
 );
 
+// PUT /api/profile/email
+// Email/password routes are handled in `user.routes.ts` under /api/users
+
+
 export default router;

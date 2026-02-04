@@ -100,6 +100,16 @@ export default function App() {
         }
       />
 
+      {/* ---------- Test Comments Page ---------- */}
+      <Route
+        path="/comments/:ticketId"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "USER"]}>
+            <CommentsPage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* ---------- Kanban (ADMIN / MANAGER) ---------- */}
       <Route
         path="/projects/:projectId/kanban"

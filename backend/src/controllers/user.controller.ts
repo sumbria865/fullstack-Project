@@ -80,11 +80,13 @@ export const changeEmail = async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user.id;
 
-    const { newEmail, password } = req.body;
+    let { newEmail, password } = req.body;
 
     if (!newEmail || !password) {
       return res.status(400).json({ message: "Email and password required" });
     }
+
+    newEmail = String(newEmail).trim().toLowerCase();
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -92,6 +94,11 @@ export const changeEmail = async (req: Request, res: Response) => {
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // If same email, nothing to do
+    if (user.email === newEmail) {
+      return res.status(200).json({ message: "Email unchanged" });
     }
 
     const validPassword = await comparePassword(password, user.password);
@@ -103,16 +110,17 @@ export const changeEmail = async (req: Request, res: Response) => {
       where: { email: newEmail },
     });
 
-    if (emailExists) {
+    // Allow if the only match is the same user
+    if (emailExists && emailExists.id !== userId) {
       return res.status(409).json({ message: "Email already in use" });
     }
 
-    await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: { email: newEmail },
     });
 
-    res.status(200).json({ message: "Email updated successfully" });
+    res.status(200).json({ message: "Email updated successfully", email: updated.email });
   } catch (error) {
     console.error("Change email error:", error);
     res.status(500).json({ message: "Failed to change email" });
