@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import api from "../services/api";
-import React from "react";
+
 
 /* ---------- Types ---------- */
 type Status = "TODO" | "IN_PROGRESS" | "DONE";

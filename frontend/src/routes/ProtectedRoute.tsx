@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import React, { JSX } from "react";
+import { JSX } from "react";
 
 type Role = "ADMIN" | "MANAGER" | "USER";
 
