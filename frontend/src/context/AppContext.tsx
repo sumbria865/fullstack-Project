@@ -21,6 +21,8 @@ type AppContextType = {
   setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   tickets: Ticket[];
   setTickets: React.Dispatch<React.SetStateAction<Ticket[]>>;
+  activeProjectId: number | null;
+  setActiveProjectId: React.Dispatch<React.SetStateAction<number | null>>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,9 +30,10 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 
   return (
-    <AppContext.Provider value={{ projects, setProjects, tickets, setTickets }}>
+    <AppContext.Provider value={{ projects, setProjects, tickets, setTickets, activeProjectId, setActiveProjectId }}>
       {children}
     </AppContext.Provider>
   );

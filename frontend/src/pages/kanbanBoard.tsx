@@ -33,9 +33,12 @@ const statusStyles: Record<Status, string> = {
 };
 
 /* ---------- Main ---------- */
-export default function KanbanBoard() {
-  const { projectId } = useParams();
+export default function KanbanBoard({ projectId: propProjectId, userRole: propUserRole }: { projectId?: string; userRole?: string } = {}) {
+  const { projectId: paramProjectId } = useParams();
   const navigate = useNavigate();
+
+  const projectId = propProjectId || paramProjectId;
+  const userRole = propUserRole || "USER"; // default
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);

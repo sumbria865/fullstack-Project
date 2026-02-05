@@ -90,7 +90,7 @@ export default function ProjectDetails() {
 
         {/* Kanban Board */}
         <div className="bg-white rounded-xl shadow p-4">
-          <KanbanBoard projectId={projectId} userRole={userRole} />
+          <KanbanBoard projectId={projectId!} userRole={userRole} />
         </div>
       </div>
     </PageWrapper>

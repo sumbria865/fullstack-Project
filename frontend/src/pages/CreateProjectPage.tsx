@@ -170,7 +170,7 @@ export default function Projects() {
                   Edit
                 </button>
 
-                {user.role === "ADMIN" && (
+                {user && user.role === "ADMIN" && (
                   <button
                     onClick={() => deleteProject(p.id)}
                     className="text-red-600 hover:underline"

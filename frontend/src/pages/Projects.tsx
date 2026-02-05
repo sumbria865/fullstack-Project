@@ -43,7 +43,7 @@ export default function Projects() {
       }
     };
 
-    refreshProjects && loadProjects();
+    loadProjects();
   }, [refreshProjects, navigate]);
 
   /* ================= FILTER ================= */

@@ -67,7 +67,7 @@ const Dashboard = () => {
           return;
         }
 
-        const ticketPromises = projectsData.map((p) => getTickets(p.id));
+        const ticketPromises = projectsData.map((p: Project) => getTickets(p.id));
         const ticketsByProject = await Promise.all(ticketPromises);
 
         setTickets(ticketsByProject.flat());
