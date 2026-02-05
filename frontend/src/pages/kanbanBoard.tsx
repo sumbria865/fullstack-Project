@@ -37,15 +37,27 @@ const statusStyles: Record<Status, string> = {
 };
 
 /* ---------- Main ---------- */
-export default function KanbanBoard({ projectId: propProjectId, userRole: propUserRole }: { projectId?: string; userRole?: string } = {}) {
+export default function KanbanBoard({
+  projectId: propProjectId,
+  userRole: propUserRole,
+}: {
+  projectId?: string;
+  userRole?: string;
+} = {}) {
   const { projectId: paramProjectId } = useParams();
   const navigate = useNavigate();
 
   const projectId = propProjectId || paramProjectId;
-  const userRole = propUserRole || "USER"; // default
+  const userRole = propUserRole || "USER";
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ✅ FIX: hooks MUST be at top level
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor)
+  );
 
   useEffect(() => {
     if (!projectId) return;
@@ -107,29 +119,18 @@ export default function KanbanBoard({ projectId: propProjectId, userRole: propUs
       </div>
 
       <DndContext
-        sensors={useSensors(
-          useSensor(PointerSensor),
-          useSensor(KeyboardSensor)
-        )}
+        sensors={sensors}
         collisionDetection={closestCorners}
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <Column
-            id="TODO"
-            title="TODO"
-            tickets={byStatus("TODO")}
-          />
+          <Column id="TODO" title="TODO" tickets={byStatus("TODO")} />
           <Column
             id="IN_PROGRESS"
             title="IN PROGRESS"
             tickets={byStatus("IN_PROGRESS")}
           />
-          <Column
-            id="DONE"
-            title="DONE"
-            tickets={byStatus("DONE")}
-          />
+          <Column id="DONE" title="DONE" tickets={byStatus("DONE")} />
         </div>
       </DndContext>
     </div>
@@ -164,9 +165,7 @@ function Column({
         } ${isOver ? "ring-2 ring-black/20" : ""}`}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-semibold text-sm">
-            {title}
-          </h2>
+          <h2 className="font-semibold text-sm">{title}</h2>
           <span className="text-xs bg-white px-2 py-0.5 rounded-full shadow">
             {tickets.length}
           </span>
