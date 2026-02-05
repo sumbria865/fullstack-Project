@@ -5,7 +5,7 @@ import PageWrapper from "../components/layout/PageWrapper";
 import Button from "../components/ui/Button";
 import { getProjects, deleteProject } from "../services/project.service";
 import { getTickets, getMyTickets } from "../services/ticket.service";
-
+import React from "react";
 
 /* ---------- Types ---------- */
 type Project = {

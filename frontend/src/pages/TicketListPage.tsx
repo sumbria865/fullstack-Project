@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getTickets, assignTicket } from "../services/ticket.service";
 import { getUsers } from "../services/project.service";
-
+import React from "react";
 
 interface Ticket {
   id: string;

@@ -4,7 +4,7 @@ import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import api from "../services/api";
-
+import React from "react";
 
 export default function Register() {
   const navigate = useNavigate();
