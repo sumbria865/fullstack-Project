@@ -34,6 +34,16 @@ app.use(
       if (FRONTEND_ORIGINS.indexOf(origin) !== -1) {
         return callback(null, true);
       }
+      // Allow Vercel preview/deploy domains
+      try {
+        const lc = origin.toLowerCase();
+        if (lc.endsWith(".vercel.app") || lc.endsWith("vercel.app")) {
+          return callback(null, true);
+        }
+      } catch (e) {
+        // ignore and block below
+      }
+
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -41,10 +51,8 @@ app.use(
 );
 
 // Ensure OPTIONS (preflight) requests receive proper CORS headers
-app.options(
-  "*",
-  cors({ origin: FRONTEND_ORIGINS, credentials: true })
-);
+// Use permissive handler for OPTIONS so preflight always responds with CORS headers
+app.options("*", cors());
 
 // Log allowed origins for easier debugging
 console.log("CORS allowed origins:", FRONTEND_ORIGINS);
