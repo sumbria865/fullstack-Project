@@ -18,12 +18,36 @@ const app: Application = express();
    MIDDLEWARES
    ======================= */
 
+// Allowlist for CORS - configure via FRONTEND_ORIGINS env (comma-separated)
+const FRONTEND_ORIGINS = (
+  process.env.FRONTEND_ORIGINS ||
+  "http://localhost:5173,http://localhost:5174,https://fullstack-project-nine-beta.vercel.app"
+)
+  .split(",")
+  .map((s) => s.trim());
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., curl, server-side)
+      if (!origin) return callback(null, true);
+      if (FRONTEND_ORIGINS.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
+
+// Ensure OPTIONS (preflight) requests receive proper CORS headers
+app.options(
+  "*",
+  cors({ origin: FRONTEND_ORIGINS, credentials: true })
+);
+
+// Log allowed origins for easier debugging
+console.log("CORS allowed origins:", FRONTEND_ORIGINS);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
