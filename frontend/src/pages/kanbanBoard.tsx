@@ -5,6 +5,10 @@ import {
   closestCorners,
   DragEndEvent,
   useDroppable,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  KeyboardSensor,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -103,6 +107,10 @@ export default function KanbanBoard({ projectId: propProjectId, userRole: propUs
       </div>
 
       <DndContext
+        sensors={useSensors(
+          useSensor(PointerSensor),
+          useSensor(KeyboardSensor)
+        )}
         collisionDetection={closestCorners}
         onDragEnd={handleDragEnd}
       >
@@ -198,6 +206,7 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    touchAction: "none",
   };
 
   return (
@@ -206,7 +215,7 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
       style={style}
       {...attributes}
       {...listeners}
-      onClick={() => navigate(`/tickets/${ticket.id}`)}
+      onClick={() => !isDragging && navigate(`/tickets/${ticket.id}`)}
       className={`bg-white rounded-lg p-3 shadow-sm border hover:shadow-md cursor-pointer transition ${
         isDragging ? "opacity-50" : ""
       }`}
