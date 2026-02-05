@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import PageWrapper from "../components/layout/PageWrapper";
 import KanbanBoard from "./kanbanBoard";
+import ErrorBoundary from "../components/ErrorBoundary";
 import api from "../services/api";
 import { getCurrentUser } from "../services/auth.service";
 import React from "react";
@@ -90,7 +91,9 @@ export default function ProjectDetails() {
 
         {/* Kanban Board */}
         <div className="bg-white rounded-xl shadow p-4">
-          <KanbanBoard projectId={projectId!} userRole={userRole} />
+          <ErrorBoundary>
+            <KanbanBoard projectId={projectId!} userRole={userRole} />
+          </ErrorBoundary>
         </div>
       </div>
     </PageWrapper>

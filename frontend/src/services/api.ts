@@ -10,6 +10,9 @@ const api = axios.create({
   withCredentials: true, // 🔥 VERY IMPORTANT
 });
 
+// Log resolved baseURL to help diagnose 404s during deploy
+console.log("API baseURL:", api.defaults.baseURL);
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token"); // 🔁 must match login
