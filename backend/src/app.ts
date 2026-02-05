@@ -18,44 +18,33 @@ const app: Application = express();
    MIDDLEWARES
    ======================= */
 
-// Allowlist for CORS - configure via FRONTEND_ORIGINS env (comma-separated)
-const FRONTEND_ORIGINS = (
-  process.env.FRONTEND_ORIGINS ||
-  "http://localhost:5173,http://localhost:5174,https://fullstack-project-nine-beta.vercel.app"
-)
-  .split(",")
-  .map((s) => s.trim());
+// Production-safe CORS allowlist (configure here or via env)
+const allowedOrigins = [
+  "https://fullstack-project-nine-beta.vercel.app",
+  "https://fullstack-project-git-main-prinkas-projects.vercel.app",
+  "http://localhost:5173",
+];
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g., curl, server-side)
-      if (!origin) return callback(null, true);
-      if (FRONTEND_ORIGINS.indexOf(origin) !== -1) {
-        return callback(null, true);
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
       }
-      // Allow Vercel preview/deploy domains
-      try {
-        const lc = origin.toLowerCase();
-        if (lc.endsWith(".vercel.app") || lc.endsWith("vercel.app")) {
-          return callback(null, true);
-        }
-      } catch (e) {
-        // ignore and block below
-      }
-
-      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// Ensure OPTIONS (preflight) requests receive proper CORS headers
-// Use permissive handler for OPTIONS so preflight always responds with CORS headers
+// Explicitly respond to OPTIONS preflight with CORS headers
 app.options("*", cors());
 
 // Log allowed origins for easier debugging
-console.log("CORS allowed origins:", FRONTEND_ORIGINS);
+console.log("CORS allowed origins:", allowedOrigins);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
