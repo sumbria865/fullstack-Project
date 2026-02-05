@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const BASE_API =
-  (import.meta as any)?.env?.VITE_API_URL ||
+  (typeof process !== "undefined" ? (process as any).env?.VITE_API_URL : undefined) ||
   (typeof process !== "undefined" ? (process as any).env?.REACT_APP_API_URL : undefined) ||
   "https://fullstack-project-vuqf.onrender.com";
 
